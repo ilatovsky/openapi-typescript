@@ -612,6 +612,46 @@ describe("composition", () => {
         // options: DEFAULT_OPTIONS
       },
     ],
+    [
+      "allOf > apply required to whole composition",
+      {
+        given: {
+          type: "object",
+          allOf: [
+            {
+              $ref: "#/components/schemas/referred-schema",
+            },
+            {
+              required: ["prop1", "prop2"],
+            },
+          ],
+        },
+        want: `WithRequired<components["schemas"]["referred-schema"], "prop1" | "prop2">`,
+        options: {
+          ...DEFAULT_OPTIONS,
+          ctx: {
+            ...DEFAULT_OPTIONS.ctx,
+            resolve($ref) {
+              switch ($ref) {
+                case "#/components/schemas/referred-schema": {
+                  return {
+                    type: "object",
+                    properties: {
+                      prop1: { type: "string" },
+                      prop2: { type: "number" },
+                      prop3: { type: "boolean" },
+                    },
+                  };
+                }
+                default: {
+                  return undefined as any;
+                }
+              }
+            },
+          },
+        },
+      },
+    ],
   ];
 
   for (const [testName, { given, want, options = DEFAULT_OPTIONS, ci }] of tests) {

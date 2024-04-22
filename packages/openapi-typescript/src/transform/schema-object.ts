@@ -136,10 +136,14 @@ export function transformSchemaObjectWithComposition(
   }
 
   /** Collect allOf with Omit<> for discriminators */
-  function collectAllOfCompositions(items: (SchemaObject | ReferenceObject)[], required?: string[]): ts.TypeNode[] {
-    const output: ts.TypeNode[] = [];
+  function collectAllOfCompositions(
+    items: (SchemaObject | ReferenceObject)[],
+    required?: string[],
+  ): { typeNodes: ts.TypeNode[]; allOfRequired: Array<string> } {
+    const typeNodes: ts.TypeNode[] = [];
+    const allOfRequired: Array<string> = [];
     for (const item of items) {
-      let itemType: ts.TypeNode;
+      let itemType: ts.TypeNode | null = null;
       // if this is a $ref, use WithRequired<X, Y> if parent specifies required properties
       // (but only for valid keys)
       if ("$ref" in item) {
@@ -161,6 +165,8 @@ export function transformSchemaObjectWithComposition(
             itemType = tsWithRequired(itemType, validRequired, options.ctx.injectFooter);
           }
         }
+      } else if (Object.keys(item).length === 1 && item.required) {
+        allOfRequired.push(...item.required);
       }
       // otherwise, if this is a schema object, combine parent `required[]` with its own, if any
       else {
@@ -171,15 +177,19 @@ export function transformSchemaObjectWithComposition(
         itemType = transformSchemaObject({ ...item, required: itemRequired }, options);
       }
 
-      const discriminator =
-        ("$ref" in item && options.ctx.discriminators.objects[item.$ref]) || (item as any).discriminator;
-      if (discriminator) {
-        output.push(tsOmit(itemType, [discriminator.propertyName]));
-      } else {
-        output.push(itemType);
+      if (itemType) {
+        const discriminator =
+          ("$ref" in item && options.ctx.discriminators.objects[item.$ref]) ||
+          (item as any).discriminator; // eslint-disable-line @typescript-eslint/no-explicit-any
+        if (discriminator) {
+          typeNodes.push(tsOmit(itemType, [discriminator.propertyName]));
+        } else {
+          typeNodes.push(itemType);
+        }
       }
     }
-    return output;
+
+    return { typeNodes, allOfRequired };
   }
 
   // compile final type
@@ -187,10 +197,22 @@ export function transformSchemaObjectWithComposition(
 
   // core + allOf: intersect
   const coreObjectType = transformSchemaObjectCore(schemaObject, options);
-  const allOfType = collectAllOfCompositions(schemaObject.allOf ?? [], schemaObject.required);
-  if (coreObjectType || allOfType.length) {
-    const allOf: ts.TypeNode | undefined = allOfType.length ? tsIntersection(allOfType) : undefined;
-    finalType = tsIntersection([...(coreObjectType ? [coreObjectType] : []), ...(allOf ? [allOf] : [])]);
+  const { typeNodes, allOfRequired } = collectAllOfCompositions(
+    schemaObject.allOf ?? [],
+    schemaObject.required,
+  );
+  if (coreObjectType || typeNodes.length) {
+    const allOf: ts.TypeNode | undefined = typeNodes.length
+      ? tsIntersection(typeNodes)
+      : undefined;
+    finalType = tsWithRequired(
+      tsIntersection([
+        ...(coreObjectType ? [coreObjectType] : []),
+        ...(allOf ? [allOf] : []),
+      ]),
+      allOfRequired,
+      options.ctx.injectFooter,
+    );
   }
   // anyOf: union
   // (note: this may seem counterintuitive, but as TypeScript’s unions are not true XORs, they mimic behavior closer to anyOf than oneOf)
@@ -221,6 +243,7 @@ export function transformSchemaObjectWithComposition(
     if (schemaObject.nullable) {
       return tsNullable([finalType]);
     }
+
     return finalType;
   }
   // otherwise fall back to unknown type (or related variants)

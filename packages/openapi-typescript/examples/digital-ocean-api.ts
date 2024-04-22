@@ -5511,7 +5511,7 @@ export interface components {
             total?: number;
         };
         meta: {
-            meta: components["schemas"]["meta_properties"] & unknown;
+            meta: WithRequired<components["schemas"]["meta_properties"], "total">;
         };
         region: {
             /**
@@ -9468,15 +9468,15 @@ export interface components {
              */
             tag?: string | null;
         };
-        domain_record_a: components["schemas"]["domain_record"] & unknown;
-        domain_record_aaaa: components["schemas"]["domain_record"] & unknown;
-        domain_record_caa: components["schemas"]["domain_record"] & unknown;
-        domain_record_cname: components["schemas"]["domain_record"] & unknown;
-        domain_record_mx: components["schemas"]["domain_record"] & unknown;
-        domain_record_ns: components["schemas"]["domain_record"] & unknown;
-        domain_record_soa: components["schemas"]["domain_record"] & unknown;
-        domain_record_srv: components["schemas"]["domain_record"] & unknown;
-        domain_record_txt: components["schemas"]["domain_record"] & unknown;
+        domain_record_a: WithRequired<components["schemas"]["domain_record"], "type" | "name" | "data">;
+        domain_record_aaaa: WithRequired<components["schemas"]["domain_record"], "type" | "name" | "data">;
+        domain_record_caa: WithRequired<components["schemas"]["domain_record"], "type" | "name" | "data" | "flags" | "tag">;
+        domain_record_cname: WithRequired<components["schemas"]["domain_record"], "type" | "name" | "data">;
+        domain_record_mx: WithRequired<components["schemas"]["domain_record"], "type" | "data" | "priority">;
+        domain_record_ns: WithRequired<components["schemas"]["domain_record"], "type" | "name" | "data" | "flags" | "tag">;
+        domain_record_soa: WithRequired<components["schemas"]["domain_record"], "type" | "ttl">;
+        domain_record_srv: WithRequired<components["schemas"]["domain_record"], "type" | "name" | "data" | "priority" | "port" | "flags" | "tag">;
+        domain_record_txt: WithRequired<components["schemas"]["domain_record"], "type" | "name" | "data" | "flags" | "tag">;
         /**
          * @deprecated
          * @description **Note**: All Droplets created after March 2017 use internal kernels by default.
@@ -19430,7 +19430,7 @@ export interface operations {
                  *         8043964
                  *       ]
                  *     } */
-                "application/json": components["schemas"]["firewall"] & unknown & (unknown | unknown);
+                "application/json": WithRequired<components["schemas"]["firewall"] & (unknown | unknown), "name">;
             };
         };
         responses: {
