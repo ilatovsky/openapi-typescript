@@ -48,7 +48,7 @@ export default function transformSchemaObject(
  * Transform SchemaObjects
  */
 export function transformSchemaObjectWithComposition(
-  schemaObject: SchemaObject | ReferenceObject,
+  schemaObject: SchemaObject,
   options: TransformNodeOptions,
 ): ts.TypeNode {
   /**
@@ -69,17 +69,17 @@ export function transformSchemaObjectWithComposition(
   }
 
   /**
+     * const (valid for any type)
+     */
+  if (schemaObject.const !== null && schemaObject.const !== undefined) {
+    return schemaObject.nullable ? tsNullable([tsLiteral(schemaObject.const)]): tsLiteral(schemaObject.const);
+  }
+
+  /**
    * ReferenceObject
    */
   if ("$ref" in schemaObject) {
     return oapiRef(schemaObject.$ref);
-  }
-
-  /**
-   * const (valid for any type)
-   */
-  if (schemaObject.const !== null && schemaObject.const !== undefined) {
-    return tsLiteral(schemaObject.const);
   }
 
   /**

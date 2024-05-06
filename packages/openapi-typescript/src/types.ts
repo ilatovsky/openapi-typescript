@@ -451,6 +451,7 @@ export type SchemaObject = {
   | BooleanSubtype
   | NullSubtype
   | ObjectSubtype
+  | ReferenceObject
   | {
       type: ("string" | "number" | "integer" | "array" | "boolean" | "null" | "object")[];
     }
